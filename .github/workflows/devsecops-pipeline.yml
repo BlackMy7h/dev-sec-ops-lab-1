@@ -121,7 +121,6 @@ jobs:
 
       - name: Run security tests
         run: |
-          cd part2
           PYTHONPATH=part1 pytest part2/test_security.py -v \
             --tb=short \
             --junitxml=security_test_results.xml
