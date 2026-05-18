@@ -1,0 +1,13 @@
+<!doctype html>
+<html>
+<body>
+  <form method="GET">
+    Search: <input name="q" value="{{ query }}">
+    <input type="submit" value="Search">
+  </form>
+
+  {% if query %}
+    <p>Search results for: {{ query }}</p>
+  {% endif %}
+</body>
+</html>

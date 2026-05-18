@@ -81,6 +81,23 @@ def validate_host(host: str) -> bool:
     """Whitelist allowed ping targets."""
     return host in ALLOWED_HOSTS
 
+def sanitize_search_query(query: str) -> str:
+    """Remove dangerous URI schemes before reflecting search input."""
+    if not query:
+        return ""
+
+    dangerous_patterns = [
+        "javascript:",
+        "vbscript:",
+        "data:",
+    ]
+
+    sanitized = query
+    for pattern in dangerous_patterns:
+        sanitized = re.sub(pattern, "", sanitized, flags=re.IGNORECASE)
+
+    return sanitized
+
 # ─── Routes ───────────────────────────────────────────────────────────────────
 
 @app.route("/")
@@ -126,12 +143,12 @@ def dashboard():
     return f"<h1>Welcome {session['username']}!</h1><p>Role: {session['role']}</p>"
 
 
-# FIX 4: Search uses templates with auto-escaping - XSS prevented
+# FIX 4: Search uses sanitization + templates with auto-escaping - XSS prevented
 @app.route("/search")
 @login_required
 def search():
     query = request.args.get("q", "")
-    # Jinja2 auto-escaping handles XSS - just pass to template
+    query = sanitize_search_query(query)
     return render_template("search.html", query=query)
 
 
