@@ -1,6 +1,7 @@
 # ─── DevSecOps Lab - Session 3 ────────────────────────────────────────────────
 # Production-hardened Dockerfile for Flask application
 # Follows CIS Docker Benchmark recommendations
+# Uses Alpine Linux for minimal attack surface and reduced CVE footprint
 # ──────────────────────────────────────────────────────────────────────────────
 
 # Stage 1: Build dependencies
@@ -8,13 +9,27 @@ FROM python:3.11-alpine AS builder
 
 WORKDIR /build
 
+# Security: Update base image packages
+RUN apk update && apk upgrade && rm -rf /var/cache/apk/*
+
 # Install only build-time dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
+RUN pip install --no-cache-dir --user -r requirements.txt && \
+    pip uninstall -y wheel && \
+    pip install --no-cache-dir --user wheel>=0.46.2
 
 
 # Stage 2: Production image (minimal attack surface)
-FROM python:3.11-slim AS production
+FROM python:3.11-alpine AS production
+
+# Security: Update base image packages
+RUN apk update && apk upgrade && rm -rf /var/cache/apk/*
+
+# Security: Install shadow utilities for user management and dumb-init
+RUN apk add --no-cache shadow dumb-init
+
+# Security: Upgrade wheel and setuptools to remove CVE-2026-24049
+RUN pip install --upgrade wheel>=0.46.2 setuptools
 
 # Security: Create non-root user
 RUN groupadd -r appgroup && useradd -r -g appgroup -d /app -s /sbin/nologin appuser
@@ -25,14 +40,8 @@ WORKDIR /app
 COPY --from=builder /root/.local /home/appuser/.local
 
 # Copy application code
-COPY --chown=appuser:appgroup app_secure.py .
-COPY --chown=appuser:appgroup templates/ ./templates/
-
-# Security: Remove package manager after use (reduce attack surface)
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends dumb-init && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+COPY --chown=appuser:appgroup part1/app_secure.py .
+COPY --chown=appuser:appgroup part1/templates/ ./templates/
 
 # Security: No writable filesystem in production
 # Only /tmp and specific dirs are writable
