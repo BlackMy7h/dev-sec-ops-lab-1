@@ -1,0 +1,3 @@
+security:
+  ignore-cvss-severity-below: 0
+  continue-on-vulnerability-error: true

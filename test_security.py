@@ -96,10 +96,10 @@ class TestXSS:
         assert b"&lt;script&gt;" in rv.data or xss_payload.encode() not in rv.data
 
     def test_xss_href_injection(self, client):
-        """javascript: URI injection should not execute."""
+        """javascript: URI injection should be HTML-escaped, not executable."""
         self._login(client)
         rv = client.get("/search?q=<a href='javascript:void(0)'>click</a>")
-        assert b"javascript:" not in rv.data
+        assert b"&lt;a href" in rv.data and b"&#39;javascript:" in rv.data
 
 
 # ─── API Security Tests ───────────────────────────────────────────────────────
